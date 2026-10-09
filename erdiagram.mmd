@@ -1,0 +1,40 @@
+erDiagram
+    User {
+        uuid user_id PK
+        string username
+        string email
+        date registered_at
+    }
+
+    Title {
+        uuid title_id PK
+        uuid studio_id FK
+        string name
+        string type
+        int episodes_or_chapters
+        string status
+    }
+
+    Genre {
+        uuid genre_id PK
+        string genre_name
+    }
+
+    Studio {
+        uuid studio_id PK
+        string studio_name
+        string country
+    }
+
+    Review {
+        uuid review_id PK
+        uuid user_id FK
+        uuid title_id FK
+        int rating
+        string comment
+    }
+
+    Studio ||--o{ Title : "1:N"
+    Title }|--|{ Genre : "N:M"
+    User ||--o{ Review : "1:N"
+    Title ||--o{ Review : "1:N"
