@@ -8,7 +8,7 @@ erDiagram
 
     Title {
         uuid title_id PK
-        uuid studio_id FK
+        uuid studio_id FK "optional"
         string name
         string type
         int episodes_or_chapters
@@ -34,7 +34,17 @@ erDiagram
         string comment
     }
 
-    Studio ||--o{ Title : "1:N"
-    Title }|--|{ Genre : "N:M"
-    User ||--o{ Review : "1:N"
-    Title ||--o{ Review : "1:N"
+    UserListEntry {
+        uuid entry_id PK
+        uuid user_id FK
+        uuid title_id FK
+        string watch_status
+        int progress
+    }
+
+    Studio |o--o{ Title : ""
+    Title }|--|{ Genre : ""
+    User ||--o{ Review : ""
+    Title ||--o{ Review : ""
+    User ||--o{ UserListEntry : ""
+    Title ||--o{ UserListEntry : ""
