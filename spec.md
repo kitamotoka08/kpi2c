@@ -216,3 +216,80 @@ deactivate Service
 deactivate Controller
 @enduml
 ```
+
+# Sequence-діаграма 2: Автоматичне завершення при досягненні максимального епізоду
+
+```
+@startuml
+autonumber
+actor "Користувач" as User
+participant "ListController" as Controller
+participant "ListService" as Service
+participant "TitleRepository" as TitleRepo
+participant "UserListEntryRepository" as EntryRepo
+
+User -> Controller : updateProgress(userId, titleId, progress=64)
+activate Controller
+
+Controller -> Service : handleProgressUpdate(userId, titleId, 64)
+activate Service
+
+Service -> TitleRepo : findById(titleId)
+activate TitleRepo
+TitleRepo --> Service : Title(episodes_or_chapters=64, status="триває")
+deactivate TitleRepo
+
+Service -> EntryRepo : findByUserAndTitle(userId, titleId)
+activate EntryRepo
+EntryRepo --> Service : UserListEntry(progress=63, watch_status="дивлюся")
+deactivate EntryRepo
+
+opt progress == Title.episodes_or_chapters
+  Service -> Service : setWatchStatus("переглянуто")
+end
+
+Service -> EntryRepo : save(entryId, progress=64, watch_status="переглянуто")
+activate EntryRepo
+EntryRepo --> Service : savedEntry
+deactivate EntryRepo
+
+Service --> Controller : 200 OK (savedEntry)
+Controller --> User : оновлений запис зі статусом "переглянуто"
+
+deactivate Service
+deactivate Controller
+@enduml
+```
+
+# Sequence-діаграма 3: Помилка при введенні невалідного прогресу
+```
+@startuml
+autonumber
+actor "Користувач" as User
+participant "ListController" as Controller
+participant "ListService" as Service
+participant "TitleRepository" as TitleRepo
+
+User -> Controller : updateProgress(userId, titleId, invalidProgress)
+activate Controller
+
+Controller -> Service : validateAndUpdate(userId, titleId, invalidProgress)
+activate Service
+
+Service -> TitleRepo : findById(titleId)
+activate TitleRepo
+TitleRepo --> Service : Title(episodes_or_chapters=12)
+deactivate TitleRepo
+
+alt invalidProgress < 0
+  Service --> Controller : Error("progress не може бути меншим за 0")
+else invalidProgress > Title.episodes_or_chapters
+  Service --> Controller : Error("progress перевищує кількість епізодів")
+end
+
+Controller --> User : 400 Bad Request (повідомлення про помилку)
+
+deactivate Service
+deactivate Controller
+@enduml
+```
