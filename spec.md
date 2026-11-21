@@ -140,4 +140,79 @@ Moderator --> UC6
 UC2 ..> UC1 : <<include>>
 UC4 ..> UC5 : <<extend>>
 @enduml
+```
 
+# Завдання 3: Sequence-діаграми для сценаріїв UC-3
+
+## Учасники та кроки сценаріїв
+
+### Сценарій 1: Успішне оновлення прогресу та статусу перегляду
+- Учасники: Користувач, ListController, ListService, UserListEntryRepository, TitleRepository.
+- Кроки:
+  1. Користувач змінює progress на 11 та залишає watch_status = "дивлюся" для тайтла у своєму списку.
+  2. ListController перевіряє автентифікацію та передає запит у ListService.
+  3. ListService отримує запис UserListEntry і перевіряє ліміт Title.episodes_or_chapters.
+  4. Оскільки progress менший за максимуму та не виходить за межі, ListService оновлює UserListEntry через UserListEntryRepository і повертає результат.
+  5. Користувач бачить підтвердження успішного оновлення.
+
+### Сценарій 2: Автоматичне завершення при досягненні максимального епізоду
+- Учасники: Користувач, ListController, ListService, UserListEntryRepository, TitleRepository.
+- Кроки:
+  1. Користувач оновлює progress до 64 (дорівнює Title.episodes_or_chapters).
+  2. ListController делегує обробку у ListService.
+  3. ListService звіряє progress із Title.episodes_or_chapters і виявляє досягнення максимуму.
+  4. ListService автоматично встановлює UserListEntry.watch_status = "переглянуто" (не змінюючи Title.status) і зберігає зміни через UserListEntryRepository.
+  5. Користувач отримує оновлений стан запису.
+
+### Сценарій 3 (Scenario Outline): Помилка при введенні невалідного прогресу
+- Учасники: Користувач, ListController, ListService, TitleRepository.
+- Кроки:
+  1. Користувач намагається встановити невалідне значення progress (наприклад, -1 або 13 при максимумі 12).
+  2. ListController передає запит у ListService.
+  3. ListService перевіряє межі (0 <= progress <= Title.episodes_or_chapters) і виявляє порушення.
+  4. Запит відхиляється з помилкою валідації, дані в UserListEntry не змінюються.
+  5. Користувач бачить повідомлення про помилку валідації.
+
+## Sequence-діаграма 1: Успішне оновлення прогресу та статусу перегляду
+
+```
+@startuml
+autonumber
+actor "Користувач" as User
+participant "ListController" as Controller
+participant "ListService" as Service
+participant "TitleRepository" as TitleRepo
+participant "UserListEntryRepository" as EntryRepo
+
+User -> Controller : updateListEntry(userId, titleId, progress=11, status="дивлюся")
+activate Controller
+
+Controller -> Service : updateProgress(userId, titleId, 11, "дивлюся")
+activate Service
+
+Service -> TitleRepo : findById(titleId)
+activate TitleRepo
+TitleRepo --> Service : Title(episodes_or_chapters=24, status="триває")
+deactivate TitleRepo
+
+Service -> EntryRepo : findByUserAndTitle(userId, titleId)
+activate EntryRepo
+EntryRepo --> Service : UserListEntry(progress=10, watch_status="дивлюся")
+deactivate EntryRepo
+
+alt progress валідний (0 <= progress <= episodes_or_chapters)
+  Service -> EntryRepo : save(entryId, progress=11, watch_status="дивлюся")
+  activate EntryRepo
+  EntryRepo --> Service : updatedEntry
+  deactivate EntryRepo
+  Service --> Controller : 200 OK (updatedEntry)
+  Controller --> User : підтвердження оновлення
+else progress поза межами або запис не знайдено
+  Service --> Controller : ValidationError
+  Controller --> User : помилка валідації
+end
+
+deactivate Service
+deactivate Controller
+@enduml
+```
